@@ -1,0 +1,30 @@
+name: safedrive
+description: "A new Flutter project."
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ^3.7.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  shared_preferences: ^2.2.2
+  google_maps_flutter: ^2.5.0
+  geolocator: ^9.0.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/Safedrive.png
+    - assets/images/skytowers.png
+    - assets/images/onboardinglocation.png
+    - assets/images/onboardingalert.png
+    - assets/images/safedrive_black.png
+    - assets/images/flag_mz.png
