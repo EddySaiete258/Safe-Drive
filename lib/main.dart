@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'screens/splash_screen.dart';
 
-void main() {
-  runApp(const SafeDriveApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  return runApp(const SafeDriveApp());
 }
 
 class SafeDriveApp extends StatelessWidget {

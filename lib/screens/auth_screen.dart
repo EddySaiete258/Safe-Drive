@@ -116,6 +116,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                       controller: _tabController,
                       labelColor: Colors.black,
                       unselectedLabelColor: Colors.grey,
+                      dividerHeight: 0,
                       indicator: const UnderlineTabIndicator(
                         borderSide: BorderSide(width: 3, color: Color(0xFF4CE5B1)),
                         insets: EdgeInsets.only(bottom: 0),
