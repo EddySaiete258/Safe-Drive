@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'contributor_map_screen.dart'; // Atualizado aqui
+import 'contributor_map_screen.dart';
 
 class OTPVerificationScreen extends StatefulWidget {
   const OTPVerificationScreen({super.key});
@@ -11,7 +11,7 @@ class OTPVerificationScreen extends StatefulWidget {
 
 class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   final List<TextEditingController> _controllers =
-      List.generate(4, (_) => TextEditingController());
+      List.generate(6, (_) => TextEditingController());
 
   bool _isLoading = false;
 
@@ -32,7 +32,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
     await Future.delayed(const Duration(seconds: 2));
     setState(() => _isLoading = false);
 
-    if (code == '1234') {
+    if (code == '123456') {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const ContributorMapScreen()),
@@ -40,7 +40,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('O código inserido está incorreto. Verifique e tente novamente.'),
+          content: Text('Código incorreto. Tente novamente.'),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -99,9 +99,9 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                   const SizedBox(height: 40),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: List.generate(4, (index) {
+                    children: List.generate(6, (index) {
                       return SizedBox(
-                        width: 60,
+                        width: 50,
                         height: 60,
                         child: TextField(
                           controller: _controllers[index],
@@ -120,7 +120,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                           ),
                           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                           onChanged: (val) {
-                            if (val.isNotEmpty && index < 3) {
+                            if (val.isNotEmpty && index < 5) {
                               FocusScope.of(context).nextFocus();
                             }
                           },
