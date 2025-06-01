@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'otp_verification_screen.dart';
 import 'terms_screen.dart';
+import 'navigation_map_screen.dart'; // ajuste o path conforme necessário
+
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -216,7 +218,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                                     if (_formKey.currentState!.validate()) {
                                       Navigator.push(
                                         context,
-                                        MaterialPageRoute(builder: (_) => const OTPVerificationScreen()),
+                                        MaterialPageRoute(builder: (_) => const NavigationMapScreen()),
                                       );
                                     }
                                   },
