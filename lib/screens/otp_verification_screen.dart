@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'package:safedrive/providers/auth_provider.dart';
 import 'contributor_map_screen.dart';
 
 class OTPVerificationScreen extends StatefulWidget {
@@ -10,8 +12,10 @@ class OTPVerificationScreen extends StatefulWidget {
 }
 
 class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
-  final List<TextEditingController> _controllers =
-      List.generate(6, (_) => TextEditingController());
+  final List<TextEditingController> _controllers = List.generate(
+    6,
+    (_) => TextEditingController(),
+  );
 
   bool _isLoading = false;
 
@@ -31,20 +35,23 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
 
     await Future.delayed(const Duration(seconds: 2));
     setState(() => _isLoading = false);
+    final authProvider = Provider.of<AuthProviderLocal>(context, listen: false);
 
-    if (code == '123456') {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const ContributorMapScreen()),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Código incorreto. Tente novamente.'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-    }
+    authProvider.verifyOTP(code, context);
+
+    // if (code == '123456') {
+    //   Navigator.pushReplacement(
+    //     context,
+    //     MaterialPageRoute(builder: (_) => const ContributorMapScreen()),
+    //   );
+    // } else {
+    //   ScaffoldMessenger.of(context).showSnackBar(
+    //     const SnackBar(
+    //       content: Text('Código incorreto. Tente novamente.'),
+    //       backgroundColor: Colors.redAccent,
+    //     ),
+    //   );
+    // }
   }
 
   @override
@@ -58,6 +65,15 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   @override
   Widget build(BuildContext context) {
     final height = MediaQuery.of(context).size.height;
+    final authProvider = Provider.of<AuthProviderLocal>(context, listen: false);
+
+    if (Provider.of<AuthProviderLocal>(context, listen: true).isLoading) {
+      return Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFF4CE5B1)),
+        ),
+      );
+    }
 
     return Scaffold(
       body: Column(
@@ -69,8 +85,12 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
             padding: const EdgeInsets.fromLTRB(16, 50, 16, 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Icon(Icons.arrow_back, color: Colors.white),
+              children: [
+                IconButton(
+                  padding: EdgeInsets.all(0.0),
+                  onPressed: () => Navigator.pop(context),
+                  icon: Icon(Icons.arrow_back, color: Colors.white),
+                ),
                 SizedBox(height: 30),
                 Text(
                   'Verificacao do Numero',
@@ -83,10 +103,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                 SizedBox(height: 8),
                 Text(
                   'Introduza o seu codigo OTP abaixo:',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.white,
-                  ),
+                  style: TextStyle(fontSize: 18, color: Colors.white),
                 ),
               ],
             ),
@@ -106,19 +123,30 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                         child: TextField(
                           controller: _controllers[index],
                           textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 24, color: Colors.black),
+                          style: const TextStyle(
+                            fontSize: 24,
+                            color: Colors.black,
+                          ),
                           keyboardType: TextInputType.number,
                           maxLength: 1,
                           decoration: InputDecoration(
                             counterText: '',
                             enabledBorder: UnderlineInputBorder(
-                              borderSide: BorderSide(color: Colors.grey.shade400, width: 2),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade400,
+                                width: 2,
+                              ),
                             ),
                             focusedBorder: UnderlineInputBorder(
-                              borderSide: BorderSide(color: Colors.grey.shade800, width: 2),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade800,
+                                width: 2,
+                              ),
                             ),
                           ),
-                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
                           onChanged: (val) {
                             if (val.isNotEmpty && index < 5) {
                               FocusScope.of(context).nextFocus();
@@ -140,19 +168,23 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              height: 24,
-                              width: 24,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 3,
+                      child:
+                          _isLoading
+                              ? const SizedBox(
+                                height: 24,
+                                width: 24,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 3,
+                                ),
+                              )
+                              : const Text(
+                                'Verificar',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                ),
                               ),
-                            )
-                          : const Text(
-                              'Verificar',
-                              style: TextStyle(color: Colors.white, fontSize: 16),
-                            ),
                     ),
                   ),
                 ],

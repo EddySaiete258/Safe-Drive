@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:provider/provider.dart';
+import 'package:safedrive/providers/auth_provider.dart';
 import 'package:safedrive/utils/image_utils.dart';
 import 'dart:async';
 
@@ -291,7 +293,7 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
                               label: const Text("Reportar"),
                               onPressed: () {
                                 if (_formKey.currentState!.validate()) {
-                                  setState((){
+                                  setState(() {
                                     _temporaryMarker = null;
                                     _selectedLatLng = null;
                                   });
@@ -327,7 +329,51 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProviderLocal>(context, listen: false);
+
+    if (Provider.of<AuthProviderLocal>(context, listen: true).isLoading) {
+      return Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFF4CE5B1)),
+        ),
+      );
+    }
+
     return Scaffold(
+      appBar: AppBar(backgroundColor: Color(0xFF4CE5B1)),
+      drawer: Drawer(
+        backgroundColor: Color(0xFF4CE5B1),
+        child: ListView(
+          // Important: Remove any padding from the ListView.
+          padding: EdgeInsets.zero,
+          children: [
+            DrawerHeader(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('Safedrive', style: TextStyle(color: Colors.white)),
+                ],
+              ),
+            ),
+
+            ListTile(
+              title: Text(
+                'Sair',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              leading: Icon(Icons.logout, color: Colors.white),
+              onTap: () async {
+                Navigator.pop(context);
+                await authProvider.logout(context);
+              },
+            ),
+          ],
+        ),
+      ),
       body:
           _currentLatLng == null
               ? const Center(child: CircularProgressIndicator())
