@@ -253,7 +253,7 @@ class _AuthScreenState extends State<AuthScreen>
                                 ElevatedButton(
                                   onPressed: () async {
                                     if (_formKey.currentState!.validate()) {
-                                      await authProvider.login('+258${_phoneController.value.text.trim()}', context);
+                                      await authProvider.signup(_nameController.value.text.trim(),'+258${_phoneController.value.text.trim()}', context);
                                       // Navigator.push(
                                       //   context,
                                       //   MaterialPageRoute(

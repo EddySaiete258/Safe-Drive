@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:safedrive/model/user.dart';
 import 'package:safedrive/providers/auth_provider.dart';
 import 'contributor_map_screen.dart';
 
 class OTPVerificationScreen extends StatefulWidget {
-  const OTPVerificationScreen({super.key});
+  UserAuth? user;
+  OTPVerificationScreen({super.key, this.user});
 
   @override
   State<OTPVerificationScreen> createState() => _OTPVerificationScreenState();
@@ -18,7 +20,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
   );
 
   bool _isLoading = false;
-
+  UserAuth? user;
   void _verifyCode() async {
     if (_controllers.any((c) => c.text.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -37,7 +39,7 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
     setState(() => _isLoading = false);
     final authProvider = Provider.of<AuthProviderLocal>(context, listen: false);
 
-    authProvider.verifyOTP(code, context);
+    authProvider.verifyOTP(code, user, context);
 
     // if (code == '123456') {
     //   Navigator.pushReplacement(
@@ -53,7 +55,11 @@ class _OTPVerificationScreenState extends State<OTPVerificationScreen> {
     //   );
     // }
   }
-
+  @override
+  void initState() {
+    super.initState();
+    user = widget.user;
+  }
   @override
   void dispose() {
     for (final ctrl in _controllers) {

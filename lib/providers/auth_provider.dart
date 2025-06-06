@@ -1,18 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:safedrive/model/user.dart';
 import 'package:safedrive/screens/auth_screen.dart';
 import 'package:safedrive/screens/contributor_map_screen.dart';
 import 'package:safedrive/screens/otp_verification_screen.dart';
+import 'package:safedrive/services/firestore_service.dart';
+import 'package:safedrive/utils/custom_snackbar.dart';
 
 class AuthProviderLocal with ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final repository = FireStoreRepository();
   String? _verificationId;
   bool isLoading = false;
 
-  Future<void> sendOTP(String phoneNumber, BuildContext context) async {
+  Future<void> signup(
+    String name,
+    String phoneNumber,
+    BuildContext context,
+  ) async {
     isLoading = true;
     notifyListeners();
-
+    bool userExist = await repository.userExist(phoneNumber);
+    if (userExist) {
+      customSnackBar(
+        context,
+        "Numero de telefone ja cadastrado",
+        isError: true,
+      );
+      isLoading = false;
+      notifyListeners();
+      return;
+    }
+    UserAuth user = UserAuth(name, phoneNumber);
     await _auth.verifyPhoneNumber(
       phoneNumber: phoneNumber,
       timeout: const Duration(seconds: 60),
@@ -33,9 +52,10 @@ class AuthProviderLocal with ChangeNotifier {
         _verificationId = verificationId;
         isLoading = false;
         notifyListeners();
+        customSnackBar(context, "Codigo enviado com sucesso");
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const OTPVerificationScreen()),
+          MaterialPageRoute(builder: (_) => OTPVerificationScreen(user: user)),
         );
       },
       codeAutoRetrievalTimeout: (String verificationId) {
@@ -44,7 +64,11 @@ class AuthProviderLocal with ChangeNotifier {
     );
   }
 
-  Future<void> verifyOTP(String smsCode, BuildContext context) async {
+  Future<void> verifyOTP(
+    String smsCode,
+    UserAuth? user,
+    BuildContext context,
+  ) async {
     isLoading = true;
     notifyListeners();
 
@@ -56,6 +80,22 @@ class AuthProviderLocal with ChangeNotifier {
       );
 
       await _auth.signInWithCredential(credential);
+
+      if (user != null) {
+        bool userCreated = await repository.saveUser(user);
+
+        if (!userCreated) {
+          customSnackBar(
+            context,
+            "Nao foi possivel efectuar o cadastrado, tente mais tarde",
+            isError: true,
+          );
+          isLoading = false;
+          notifyListeners();
+          return;
+        }
+      }
+
       isLoading = false;
       print("Valid Credential");
       notifyListeners();
@@ -75,7 +115,6 @@ class AuthProviderLocal with ChangeNotifier {
   Future<void> login(String phoneNumber, BuildContext context) async {
     isLoading = true;
     notifyListeners();
-    print("PHONE: $phoneNumber");
     await _auth.verifyPhoneNumber(
       phoneNumber: phoneNumber,
       timeout: const Duration(seconds: 60),
@@ -98,12 +137,11 @@ class AuthProviderLocal with ChangeNotifier {
         notifyListeners();
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const OTPVerificationScreen()),
+          MaterialPageRoute(builder: (_) => OTPVerificationScreen()),
         );
       },
       codeAutoRetrievalTimeout: (String verificationId) {
         _verificationId = verificationId;
-        print("verificationId: $verificationId");
       },
     );
   }
