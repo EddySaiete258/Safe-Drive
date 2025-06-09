@@ -4,6 +4,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:provider/provider.dart';
+import 'package:safedrive/model/Road_block.dart';
 import 'package:safedrive/providers/auth_provider.dart';
 import 'package:safedrive/providers/road_block_provider.dart';
 import 'package:safedrive/utils/custom_snackbar.dart';
@@ -77,26 +78,27 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
     if (distancia <= bloqueioRaioMax) {
       var uuid = Uuid();
       final markerId = "${userPhone!}-${uuid.v4()}";
-        final roadBlockProvider = Provider.of<RoadBlockProvider>(
-          context,
-          listen: false,
-        );
+      final roadBlockProvider = Provider.of<RoadBlockProvider>(
+        context,
+        listen: false,
+      );
       setState(() {
-        Provider.of<RoadBlockProvider>(context, listen: false).selectedLatLng = latLng;
+        Provider.of<RoadBlockProvider>(context, listen: false).selectedLatLng =
+            latLng;
         _temporaryMarker = Marker(
           markerId: MarkerId(markerId),
           position: latLng,
           icon: BitmapDescriptor.defaultMarkerWithHue(
             BitmapDescriptor.hueAzure,
           ),
-          onTap: (){
+          onTap: () {
             print("Trying to remove");
             roadBlockProvider.removeMarker(context, MarkerId(markerId));
-          }
+          },
         );
         print("MARKER: " + _temporaryMarker.toString());
         _markerSet.add(_temporaryMarker!);
-        roadBlockProvider.addTemporaryMarker(context,_temporaryMarker!);
+        roadBlockProvider.addTemporaryMarker(context, _temporaryMarker!);
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -111,11 +113,19 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
   }
 
   void _openBlockForm() async {
-    if (Provider.of<RoadBlockProvider>(context, listen: false).selectedLatLng == null) return;
+    if (Provider.of<RoadBlockProvider>(context, listen: false).selectedLatLng ==
+        null)
+      return;
 
     List<Placemark> placemarks = await placemarkFromCoordinates(
-      Provider.of<RoadBlockProvider>(context, listen: false).selectedLatLng!.latitude,
-      Provider.of<RoadBlockProvider>(context, listen: false).selectedLatLng!.longitude,
+      Provider.of<RoadBlockProvider>(
+        context,
+        listen: false,
+      ).selectedLatLng!.latitude,
+      Provider.of<RoadBlockProvider>(
+        context,
+        listen: false,
+      ).selectedLatLng!.longitude,
     );
 
     String address = '';
@@ -125,7 +135,7 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
     }
 
     final _formKey = GlobalKey<FormState>();
-    String? _selectedType;
+    String? _selectedType = "Acidente";
     String? _description;
     String? _duration;
     final List<File> _photos = [];
@@ -317,10 +327,34 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
                               icon: const Icon(Icons.check),
                               label: const Text("Reportar"),
                               onPressed: () {
+                                RoadBlockProvider blockProvider = Provider.of<RoadBlockProvider>(
+                                          context,
+                                          listen: false,
+                                        );
                                 if (_formKey.currentState!.validate()) {
+                                  print("${
+                                    blockProvider.selectedLatLng!.latitude.toString()+" = "+
+                                    blockProvider.selectedLatLng!.longitude.toString()+" = "+
+                                    _description! +" = "+
+                                    address+" = "+
+                                    _selectedType!+" = "+
+                                    _duration!+" = "+
+                                    _temporaryMarker!.markerId.value}");
+                                  RoadBlock roadBlock = RoadBlock(
+                                    null,
+                                    blockProvider.selectedLatLng!.latitude.toString(),
+                                    blockProvider.selectedLatLng!.longitude.toString(),
+                                    _description,
+                                    address,
+                                    _selectedType!,
+                                    _duration!,
+                                    _temporaryMarker!.markerId.value,
+                                    null
+                                  );
+                                  print("ROAD BLOCK: ${roadBlock}");
+                                  blockProvider.createRoadBlock(context, roadBlock, userPhone!);
                                   setState(() {
                                     _temporaryMarker = null;
-                                    Provider.of<RoadBlockProvider>(context, listen: false).selectedLatLng = null;
                                   });
                                   Navigator.of(context).pop();
                                 }
@@ -417,8 +451,11 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
               ),
       floatingActionButton: FloatingActionButton(
         backgroundColor:
-            roadBlockProvider.selectedLatLng != null ? const Color(0xFF4CE5B1) : Colors.grey,
-        onPressed: roadBlockProvider.selectedLatLng != null ? _openBlockForm : null,
+            roadBlockProvider.selectedLatLng != null
+                ? const Color(0xFF4CE5B1)
+                : Colors.grey,
+        onPressed:
+            roadBlockProvider.selectedLatLng != null ? _openBlockForm : null,
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );

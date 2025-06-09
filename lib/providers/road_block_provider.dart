@@ -14,12 +14,17 @@ class RoadBlockProvider extends ChangeNotifier {
   LatLng? selectedLatLng;
 
   createRoadBlock(context, RoadBlock roadBlock, String phone) async {
+    isLoading = true;
+    notifyListeners();
     try {
       String? userId = Preference.getUserId();
+      userId ??= await repository.getUserID(phone);
+
       print("USER ID: $userId");
-      await repository.createBlock(roadBlock, userId!);
-      isLoading = false;
-      notifyListeners();
+
+      await repository.createBlock(roadBlock, userId);
+      selectedLatLng = null;
+      fetchRoadBlocks(context);
       customSnackBar(context, 'Bloqueio criado com sucesso');
     } catch (e) {
       isLoading = false;
@@ -207,7 +212,6 @@ class RoadBlockProvider extends ChangeNotifier {
             );
           },
         );
-        print("FETCHED MARKER: ${newMarker.toString()}");
         markers.add(newMarker);
       }
       isLoading = false;

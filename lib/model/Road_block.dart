@@ -9,7 +9,7 @@ class RoadBlock {
   String type;
   String duration;
   String markerId;
-  DocumentReference<Map<String, dynamic>> user;
+  DocumentReference<Map<String, dynamic>>? user;
 
   RoadBlock(
     this.id,
@@ -25,10 +25,10 @@ class RoadBlock {
 
   static toMap(RoadBlock roadBlock) {
     return {
-      'id': roadBlock.id,
+      roadBlock.id ?? 'id': roadBlock.id,
       'latitude': roadBlock.latitude,
       'longitude': roadBlock.longitude,
-      'description': roadBlock.description,
+      roadBlock.description ?? 'description': roadBlock.description,
       'location': roadBlock.location,
       'type': roadBlock.type,
       'duration': roadBlock.duration,
