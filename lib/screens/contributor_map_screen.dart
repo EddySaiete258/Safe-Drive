@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 import 'package:safedrive/model/Road_block.dart';
 import 'package:safedrive/providers/auth_provider.dart';
 import 'package:safedrive/providers/road_block_provider.dart';
-import 'package:safedrive/utils/custom_snackbar.dart';
 import 'package:safedrive/utils/image_utils.dart';
 import 'dart:async';
 
@@ -25,10 +24,8 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
   String? userPhone;
   GoogleMapController? _mapController;
   LatLng? _currentLatLng;
-  // LatLng? _selectedLatLng;
   Marker? _temporaryMarker;
   late StreamSubscription<Position> _positionSubscription;
-  Set<Marker> _markerSet = {};
 
   @override
   void initState() {
@@ -48,8 +45,9 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
   void _startLocationUpdates() async {
     LocationPermission permission = await Geolocator.requestPermission();
     if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever)
+        permission == LocationPermission.deniedForever) {
       return;
+    }
 
     final settings = LocationSettings(
       accuracy: LocationAccuracy.high,
@@ -92,12 +90,9 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
             BitmapDescriptor.hueAzure,
           ),
           onTap: () {
-            print("Trying to remove");
             roadBlockProvider.removeMarker(context, MarkerId(markerId));
           },
         );
-        print("MARKER: " + _temporaryMarker.toString());
-        _markerSet.add(_temporaryMarker!);
         roadBlockProvider.addTemporaryMarker(context, _temporaryMarker!);
       });
     } else {
@@ -114,8 +109,9 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
 
   void _openBlockForm() async {
     if (Provider.of<RoadBlockProvider>(context, listen: false).selectedLatLng ==
-        null)
+        null) {
       return;
+    }
 
     List<Placemark> placemarks = await placemarkFromCoordinates(
       Provider.of<RoadBlockProvider>(
@@ -134,11 +130,11 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
       address = '${p.street}, ${p.subLocality}, ${p.locality}';
     }
 
-    final _formKey = GlobalKey<FormState>();
-    String? _selectedType = "Acidente";
-    String? _description;
-    String? _duration;
-    final List<File> _photos = [];
+    final formKey = GlobalKey<FormState>();
+    String selectedType = "Acidente";
+    String? description;
+    String? duration;
+    final List<File> photos = [];
 
     showModalBottomSheet(
       context: context,
@@ -168,7 +164,7 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
                       ],
                     ),
                     child: Form(
-                      key: _formKey,
+                      key: formKey,
                       child: SingleChildScrollView(
                         child: Column(
                           children: [
@@ -220,7 +216,7 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
                                         ),
                                       )
                                       .toList(),
-                              onChanged: (value) => _selectedType = value,
+                              onChanged: (value) => selectedType = value!,
                               validator:
                                   (value) =>
                                       value == null
@@ -234,7 +230,7 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
                                 border: OutlineInputBorder(),
                               ),
                               maxLines: 3,
-                              onChanged: (value) => _description = value,
+                              onChanged: (value) => description = value,
                             ),
                             const SizedBox(height: 10),
                             DropdownButtonFormField<String>(
@@ -251,7 +247,7 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
                                         ),
                                       )
                                       .toList(),
-                              onChanged: (value) => _duration = value,
+                              onChanged: (value) => duration = value,
                             ),
                             const SizedBox(height: 20),
                             Row(
@@ -260,7 +256,7 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
                                   onPressed: () async {
                                     final file = await pickAndCompressImage();
                                     if (file != null) {
-                                      setModalState(() => _photos.add(file));
+                                      setModalState(() => photos.add(file));
                                     }
                                   },
                                   icon: const Icon(Icons.camera_alt),
@@ -270,14 +266,14 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
                                   ),
                                 ),
                                 const SizedBox(width: 10),
-                                Text("${_photos.length} imagem(ns)"),
+                                Text("${photos.length} imagem(ns)"),
                               ],
                             ),
                             const SizedBox(height: 10),
                             Wrap(
                               spacing: 10,
                               children:
-                                  _photos.map((file) {
+                                  photos.map((file) {
                                     return Stack(
                                       children: [
                                         Image.file(
@@ -292,7 +288,7 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
                                           child: GestureDetector(
                                             onTap: () {
                                               setModalState(
-                                                () => _photos.remove(file),
+                                                () => photos.remove(file),
                                               );
                                             },
                                             child: const CircleAvatar(
@@ -327,32 +323,30 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
                               icon: const Icon(Icons.check),
                               label: const Text("Reportar"),
                               onPressed: () {
-                                RoadBlockProvider blockProvider = Provider.of<RoadBlockProvider>(
-                                          context,
-                                          listen: false,
-                                        );
-                                if (_formKey.currentState!.validate()) {
-                                  print("${
-                                    blockProvider.selectedLatLng!.latitude.toString()+" = "+
-                                    blockProvider.selectedLatLng!.longitude.toString()+" = "+
-                                    _description! +" = "+
-                                    address+" = "+
-                                    _selectedType!+" = "+
-                                    _duration!+" = "+
-                                    _temporaryMarker!.markerId.value}");
+                                RoadBlockProvider blockProvider =
+                                    Provider.of<RoadBlockProvider>(
+                                      context,
+                                      listen: false,
+                                    );
+                                if (formKey.currentState!.validate()) {
                                   RoadBlock roadBlock = RoadBlock(
                                     null,
-                                    blockProvider.selectedLatLng!.latitude.toString(),
-                                    blockProvider.selectedLatLng!.longitude.toString(),
-                                    _description,
+                                    blockProvider.selectedLatLng!.latitude
+                                        .toString(),
+                                    blockProvider.selectedLatLng!.longitude
+                                        .toString(),
+                                    description,
                                     address,
-                                    _selectedType!,
-                                    _duration!,
+                                    selectedType,
+                                    duration!,
                                     _temporaryMarker!.markerId.value,
-                                    null
+                                    null,
                                   );
-                                  print("ROAD BLOCK: ${roadBlock}");
-                                  blockProvider.createRoadBlock(context, roadBlock, userPhone!);
+                                  blockProvider.createRoadBlock(
+                                    context,
+                                    roadBlock,
+                                    userPhone!,
+                                  );
                                   setState(() {
                                     _temporaryMarker = null;
                                   });

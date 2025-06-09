@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:provider/provider.dart';
 import 'package:safedrive/model/Road_block.dart';
+import 'package:safedrive/providers/auth_provider.dart';
 import 'package:safedrive/services/firestore_service.dart';
 import 'package:safedrive/services/preferences.dart';
 import 'package:safedrive/utils/custom_snackbar.dart';
@@ -19,9 +21,6 @@ class RoadBlockProvider extends ChangeNotifier {
     try {
       String? userId = Preference.getUserId();
       userId ??= await repository.getUserID(phone);
-
-      print("USER ID: $userId");
-
       await repository.createBlock(roadBlock, userId);
       selectedLatLng = null;
       fetchRoadBlocks(context);
@@ -46,6 +45,11 @@ class RoadBlockProvider extends ChangeNotifier {
         var block = doc.data() as Map<String, dynamic>;
         RoadBlock newRoadblock = RoadBlock.fromMap(block);
         roadBlocks.add(newRoadblock);
+        AuthProviderLocal authProvider = Provider.of<AuthProviderLocal>(context, listen: false);
+        String? userId = Preference.getUserId();
+        userId ??= await repository.getUserID(authProvider.userID());
+        DocumentReference<Map<String, dynamic>>? userRef = await repository.userReference(userId);
+        bool canEdit = newRoadblock.user == userRef ? true : false;
 
         Marker newMarker = Marker(
           markerId: MarkerId(newRoadblock.markerId),
@@ -94,13 +98,26 @@ class RoadBlockProvider extends ChangeNotifier {
                                     ),
                                   ),
                                   const SizedBox(height: 20),
-                                  const Text(
-                                    'Bloqueio',
-                                    style: TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black87,
-                                    ),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text(
+                                        'Bloqueio',
+                                        style: TextStyle(
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+
+                                      IconButton(
+                                        onPressed: () {
+                                          Navigator.of(context).pop();
+                                        },
+                                        icon: Icon(Icons.close),
+                                      ),
+                                    ],
                                   ),
                                   const SizedBox(height: 20),
                                   TextFormField(
@@ -181,10 +198,11 @@ class RoadBlockProvider extends ChangeNotifier {
                                   //       }).toList(),
                                   // ),
                                   const SizedBox(height: 20),
-                                  ElevatedButton.icon(
+                                  if(canEdit)...{
+                                    ElevatedButton.icon(
                                     style: ElevatedButton.styleFrom(
                                       foregroundColor: Colors.white,
-                                      backgroundColor: const Color(0xFF4CE5B1),
+                                      backgroundColor: Colors.red,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
                                       ),
@@ -198,11 +216,17 @@ class RoadBlockProvider extends ChangeNotifier {
                                       ),
                                     ),
                                     icon: const Icon(Icons.close),
-                                    label: const Text("Fechar"),
-                                    onPressed: () {
+                                    label: const Text("Apagar"),
+                                    onPressed: () async {
+                                      await deleteRoadBlock(
+                                        context,
+                                        doc,
+                                      );
+                                      // ignore: use_build_context_synchronously
                                       Navigator.of(context).pop();
                                     },
                                   ),
+                                  }
                                 ],
                               ),
                             ),
@@ -224,7 +248,6 @@ class RoadBlockProvider extends ChangeNotifier {
 
   Future<RoadBlock?> findRoadBlock(LatLng postion) async {
     try {
-      print("POSITION: ${postion.toString()}");
       Marker marker = markers.firstWhere(
         (marker) => marker.position == postion,
       );
@@ -256,6 +279,25 @@ class RoadBlockProvider extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       customSnackBar(context, "Nao foi possivel remover o marcador");
+      notifyListeners();
+    }
+  }
+
+  deleteRoadBlock(context, DocumentSnapshot id) async {
+    isLoading = true;
+    notifyListeners();
+    try {
+      await repository.deleteRoadBlock(id);
+      customSnackBar(context, "Bloqueio apagado com sucesso");
+      isLoading = false;
+      fetchRoadBlocks(context);
+    } catch (e) {
+      customSnackBar(
+        context,
+        "Nao foi possivel remover o bloqueio tente mais tarde",
+        isError: true,
+      );
+      isLoading = false;
       notifyListeners();
     }
   }

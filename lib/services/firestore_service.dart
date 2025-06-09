@@ -60,7 +60,22 @@ class FireStoreRepository {
     }
   }
 
+  Future<DocumentReference<Map<String, dynamic>>?> userReference(
+    String userId,
+  ) async {
+    return FirebaseFirestore.instance.collection(userCollection).doc(userId);
+  }
+
   Future<QuerySnapshot> roadBlocks() async {
     return await _instance.collection(blockCollection).get();
+  }
+
+  Future<bool> deleteRoadBlock(DocumentSnapshot id) async {
+    try {
+      await id.reference.delete();
+      return true;
+    } catch (e) {
+      throw Exception(e);
+    }
   }
 }
