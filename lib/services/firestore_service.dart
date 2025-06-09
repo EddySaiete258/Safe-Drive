@@ -1,10 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:safedrive/model/Road_block.dart';
 import 'package:safedrive/model/user.dart';
 
 class FireStoreRepository {
-  FirebaseAuth auth = FirebaseAuth.instance;
   final userCollection = "Users";
+  final blockCollection = "Road_blocks";
   final FirebaseFirestore _instance = FirebaseFirestore.instance;
 
   Future<bool> userExist(String phone) async {
@@ -27,5 +27,40 @@ class FireStoreRepository {
     } catch (e) {
       return false;
     }
+  }
+
+  Future<void> createBlock(RoadBlock roadBlock, String userId) async {
+    try {
+      final userRef = FirebaseFirestore.instance
+          .collection(userCollection)
+          .doc(userId);
+      roadBlock.user = userRef;
+      await _instance
+          .collection(blockCollection)
+          .add(RoadBlock.toMap(roadBlock));
+    } catch (e) {
+      throw Exception(e);
+    }
+  }
+
+  Future<String> getUserID(String phone) async {
+    try {
+      final querySnapshot =
+          await _instance
+              .collection(userCollection)
+              .where('phone', isEqualTo: phone)
+              .limit(1)
+              .get();
+      if (querySnapshot.docs.isNotEmpty) {
+        return querySnapshot.docs.first.id;
+      }
+      throw Exception("User Not found");
+    } catch (e) {
+      throw Exception(e);
+    }
+  }
+
+  Future<QuerySnapshot> roadBlocks() async {
+    return await _instance.collection(blockCollection).get();
   }
 }

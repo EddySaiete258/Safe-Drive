@@ -5,8 +5,12 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:provider/provider.dart';
 import 'package:safedrive/providers/auth_provider.dart';
+import 'package:safedrive/providers/road_block_provider.dart';
+import 'package:safedrive/utils/custom_snackbar.dart';
 import 'package:safedrive/utils/image_utils.dart';
 import 'dart:async';
+
+import 'package:uuid/uuid.dart';
 
 class ContributorMapScreen extends StatefulWidget {
   const ContributorMapScreen({super.key});
@@ -17,10 +21,10 @@ class ContributorMapScreen extends StatefulWidget {
 
 class _ContributorMapScreenState extends State<ContributorMapScreen> {
   static const double bloqueioRaioMax = 200;
-
+  String? userPhone;
   GoogleMapController? _mapController;
   LatLng? _currentLatLng;
-  LatLng? _selectedLatLng;
+  // LatLng? _selectedLatLng;
   Marker? _temporaryMarker;
   late StreamSubscription<Position> _positionSubscription;
   Set<Marker> _markerSet = {};
@@ -29,6 +33,15 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
   void initState() {
     super.initState();
     _startLocationUpdates();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = Provider.of<AuthProviderLocal>(context, listen: false);
+      userPhone = provider.userID();
+      final roadProvider = Provider.of<RoadBlockProvider>(
+        context,
+        listen: false,
+      );
+      roadProvider.fetchRoadBlocks(context);
+    });
   }
 
   void _startLocationUpdates() async {
@@ -62,16 +75,28 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
     );
 
     if (distancia <= bloqueioRaioMax) {
+      var uuid = Uuid();
+      final markerId = "${userPhone!}-${uuid.v4()}";
+        final roadBlockProvider = Provider.of<RoadBlockProvider>(
+          context,
+          listen: false,
+        );
       setState(() {
-        _selectedLatLng = latLng;
+        Provider.of<RoadBlockProvider>(context, listen: false).selectedLatLng = latLng;
         _temporaryMarker = Marker(
-          markerId: const MarkerId('temporary_marker'),
+          markerId: MarkerId(markerId),
           position: latLng,
           icon: BitmapDescriptor.defaultMarkerWithHue(
             BitmapDescriptor.hueAzure,
           ),
+          onTap: (){
+            print("Trying to remove");
+            roadBlockProvider.removeMarker(context, MarkerId(markerId));
+          }
         );
+        print("MARKER: " + _temporaryMarker.toString());
         _markerSet.add(_temporaryMarker!);
+        roadBlockProvider.addTemporaryMarker(context,_temporaryMarker!);
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -86,11 +111,11 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
   }
 
   void _openBlockForm() async {
-    if (_selectedLatLng == null) return;
+    if (Provider.of<RoadBlockProvider>(context, listen: false).selectedLatLng == null) return;
 
     List<Placemark> placemarks = await placemarkFromCoordinates(
-      _selectedLatLng!.latitude,
-      _selectedLatLng!.longitude,
+      Provider.of<RoadBlockProvider>(context, listen: false).selectedLatLng!.latitude,
+      Provider.of<RoadBlockProvider>(context, listen: false).selectedLatLng!.longitude,
     );
 
     String address = '';
@@ -295,18 +320,9 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
                                 if (_formKey.currentState!.validate()) {
                                   setState(() {
                                     _temporaryMarker = null;
-                                    _selectedLatLng = null;
+                                    Provider.of<RoadBlockProvider>(context, listen: false).selectedLatLng = null;
                                   });
                                   Navigator.of(context).pop();
-                                  // Future.delayed(
-                                  //   Duration(milliseconds: 300),
-                                  //   () {
-                                  //     setState(() {
-                                  //       _temporaryMarker = null;
-                                  //       _selectedLatLng = null;
-                                  //     });
-                                  //   },
-                                  // );
                                 }
                               },
                             ),
@@ -330,6 +346,10 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProviderLocal>(context, listen: false);
+    final roadBlockProvider = Provider.of<RoadBlockProvider>(
+      context,
+      listen: true,
+    );
 
     if (Provider.of<AuthProviderLocal>(context, listen: true).isLoading) {
       return Scaffold(
@@ -389,13 +409,16 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
                   zoomControlsEnabled: false,
                   trafficEnabled: true,
                   onLongPress: _onMapLongPress,
-                  markers: _markerSet.isNotEmpty ? _markerSet : {},
+                  markers:
+                      roadBlockProvider.markers.isNotEmpty
+                          ? roadBlockProvider.markers
+                          : {},
                 ),
               ),
       floatingActionButton: FloatingActionButton(
         backgroundColor:
-            _selectedLatLng != null ? const Color(0xFF4CE5B1) : Colors.grey,
-        onPressed: _selectedLatLng != null ? _openBlockForm : null,
+            roadBlockProvider.selectedLatLng != null ? const Color(0xFF4CE5B1) : Colors.grey,
+        onPressed: roadBlockProvider.selectedLatLng != null ? _openBlockForm : null,
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );

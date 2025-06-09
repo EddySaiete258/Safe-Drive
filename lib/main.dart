@@ -4,14 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:safedrive/firebase_options.dart';
 import 'package:safedrive/providers/auth_provider.dart';
+import 'package:safedrive/providers/road_block_provider.dart';
+import 'package:safedrive/services/preferences.dart';
 import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Preference.init();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   FirebaseFirestore.instance.settings = const Settings(
     persistenceEnabled: true,
   );
@@ -27,7 +27,8 @@ class SafeDriveApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProviderLocal()),
-      ],      
+        ChangeNotifierProvider(create: (_) => RoadBlockProvider()),
+      ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'SafeDrive',

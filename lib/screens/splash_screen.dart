@@ -28,8 +28,8 @@ class _SplashScreenState extends State<SplashScreen> {
 
     if (!mounted) return;
     final authProvider = Provider.of<AuthProviderLocal>(context, listen: false);
-    
-    if(authProvider.isLoggedIn()){
+    bool isLogged = await authProvider.isLoggedIn();
+    if(isLogged){
       Navigator.pushReplacement(
       context,
       MaterialPageRoute(

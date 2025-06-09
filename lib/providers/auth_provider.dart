@@ -146,10 +146,11 @@ class AuthProviderLocal with ChangeNotifier {
     );
   }
 
-  bool isLoggedIn() {
+  Future<bool> isLoggedIn() async {
     var currentUser = _auth.currentUser;
 
     if (currentUser != null) {
+      await repository.getUserID(currentUser.phoneNumber.toString());
       return true;
     }
     return false;
@@ -170,5 +171,9 @@ class AuthProviderLocal with ChangeNotifier {
       isLoading = false;
       notifyListeners();
     }
+  }
+
+  String userID() {
+    return _auth.currentUser!.phoneNumber.toString();
   }
 }
