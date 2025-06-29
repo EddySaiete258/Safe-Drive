@@ -30,6 +30,7 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
   @override
   void initState() {
     super.initState();
+    // inicialize os providers do contexto
     _startLocationUpdates();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = Provider.of<AuthProviderLocal>(context, listen: false);
@@ -107,10 +108,10 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
     }
   }
 
-  void _openBlockForm() async {
+  Future<bool> _openBlockForm() async {
     if (Provider.of<RoadBlockProvider>(context, listen: false).selectedLatLng ==
         null) {
-      return;
+      return false;
     }
 
     List<Placemark> placemarks = await placemarkFromCoordinates(
@@ -136,7 +137,7 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
     String? duration;
     final List<File> photos = [];
 
-    showModalBottomSheet(
+    final result = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -322,7 +323,7 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
                               ),
                               icon: const Icon(Icons.check),
                               label: const Text("Reportar"),
-                              onPressed: () {
+                              onPressed: () async {
                                 RoadBlockProvider blockProvider =
                                     Provider.of<RoadBlockProvider>(
                                       context,
@@ -342,16 +343,16 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
                                     _temporaryMarker!.markerId.value,
                                     null,
                                   );
-                                  blockProvider.createRoadBlock(
+                                  await blockProvider.createRoadBlock(
                                     context,
                                     roadBlock,
                                     userPhone!,
-                                    photos
+                                    photos,
                                   );
                                   setState(() {
                                     _temporaryMarker = null;
                                   });
-                                  Navigator.of(context).pop();
+                                  Navigator.of(context).pop(true);
                                 }
                               },
                             ),
@@ -363,6 +364,7 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
             ),
           ),
     );
+    return result == true;
   }
 
   @override
@@ -427,21 +429,23 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
           _currentLatLng == null
               ? const Center(child: CircularProgressIndicator())
               : SafeArea(
-                child: GoogleMap(
-                  initialCameraPosition: CameraPosition(
-                    target: _currentLatLng!,
-                    zoom: 16,
-                  ),
-                  onMapCreated: (controller) => _mapController = controller,
-                  myLocationEnabled: true,
-                  myLocationButtonEnabled: true,
-                  zoomControlsEnabled: false,
-                  trafficEnabled: true,
-                  onLongPress: _onMapLongPress,
-                  markers:
-                      roadBlockProvider.markers.isNotEmpty
-                          ? roadBlockProvider.markers
-                          : {},
+                child: Consumer<RoadBlockProvider>(
+                  builder: (context, provider, _) {
+                    return provider.isLoading ? Center(child: CircularProgressIndicator(),) : GoogleMap(
+                      initialCameraPosition: CameraPosition(
+                        target: _currentLatLng!,
+                        zoom: 16,
+                      ),
+                      onMapCreated: (controller) => _mapController = controller,
+                      myLocationEnabled: true,
+                      myLocationButtonEnabled: true,
+                      zoomControlsEnabled: false,
+                      trafficEnabled: true,
+                      onLongPress: _onMapLongPress,
+                      markers:
+                          provider.markers.isNotEmpty ? provider.markers : {},
+                    );
+                  },
                 ),
               ),
       floatingActionButton: FloatingActionButton(
@@ -450,7 +454,18 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
                 ? const Color(0xFF4CE5B1)
                 : Colors.grey,
         onPressed:
-            roadBlockProvider.selectedLatLng != null ? _openBlockForm : null,
+            roadBlockProvider.selectedLatLng != null
+                ? () async {
+                  final created = await _openBlockForm();
+                  if (created && context.mounted) {
+                    await Provider.of<RoadBlockProvider>(
+                      context,
+                      listen: false,
+                    ).fetchRoadBlocks(context);
+                    setState(() {});
+                  }
+                }
+                : null,
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );

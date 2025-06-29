@@ -30,7 +30,7 @@ class RoadBlock {
       roadBlock.id ?? 'id': roadBlock.id,
       'latitude': roadBlock.latitude,
       'longitude': roadBlock.longitude,
-      roadBlock.description ?? 'description': roadBlock.description,
+      'description': roadBlock.description,
       'location': roadBlock.location,
       'type': roadBlock.type,
       'duration': roadBlock.duration,

@@ -36,24 +36,28 @@ class RoadBlockProvider extends ChangeNotifier {
       roadBlock.images = images;
       await repository.createBlock(roadBlock, userId);
       selectedLatLng = null;
-      fetchRoadBlocks(context);
-      customSnackBar(context, 'Bloqueio criado com sucesso');
+      if (context.mounted) {
+        // await fetchRoadBlocks(context);
+        customSnackBar(context, 'Bloqueio criado com sucesso');
+      }
+      isLoading = false;
+      notifyListeners();
     } catch (e) {
       print("error:: ${e.toString()}");
       isLoading = false;
       notifyListeners();
-      customSnackBar(context, 'Erro: ${e.toString()}', isError: true);
+      if (context.mounted) {
+        customSnackBar(context, 'Erro: ${e.toString()}', isError: true);
+      }
     }
   }
 
   Future fetchRoadBlocks(context) async {
+    markers.clear(); // Limpa os anteriores
+    roadBlocks.clear(); // Se estiver armazenando os roadblocks também
     isLoading = true;
     notifyListeners();
     try {
-      BitmapDescriptor roadblockIcon = await BitmapDescriptor.asset(
-        ImageConfiguration(size: Size(48, 48)), // Adjust size as needed
-        'assets/images/roadblock.png',
-      );
       QuerySnapshot data = await repository.roadBlocks();
       for (DocumentSnapshot doc in data.docs) {
         var block = doc.data() as Map<String, dynamic>;
@@ -68,6 +72,24 @@ class RoadBlockProvider extends ChangeNotifier {
         DocumentReference<Map<String, dynamic>>? userRef = await repository
             .userReference(userId);
         bool canEdit = newRoadblock.user == userRef ? true : false;
+
+        String blocImage = 'assets/images/roadblock.png';
+
+        if (newRoadblock.type == 'Acidente') {
+          blocImage = 'assets/images/blocks/acidente.png';
+        } else if (newRoadblock.type == 'Obra') {
+          blocImage = 'assets/images/blocks/obras.png';
+        } else if (newRoadblock.type == 'Manifestação') {
+          blocImage = 'assets/images/blocks/manifestacao.png';
+        } else if (newRoadblock.type == 'Inundação') {
+          blocImage = 'assets/images/blocks/condicoesclimaticas.png';
+        } else if (newRoadblock.type == 'Outro') {
+          blocImage = 'assets/images/blocks/outros.png';
+        }
+        BitmapDescriptor roadblockIcon = await BitmapDescriptor.asset(
+          ImageConfiguration(size: Size(48, 48)), // Adjust size as needed
+          blocImage,
+        );
 
         Marker newMarker = Marker(
           markerId: MarkerId(newRoadblock.markerId),
