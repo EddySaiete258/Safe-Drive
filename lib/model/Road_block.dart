@@ -10,6 +10,7 @@ class RoadBlock {
   String duration;
   String markerId;
   DocumentReference<Map<String, dynamic>>? user;
+  List<String>? images;
 
   RoadBlock(
     this.id,
@@ -21,6 +22,7 @@ class RoadBlock {
     this.duration,
     this.markerId,
     this.user,
+    [this.images]
   );
 
   static toMap(RoadBlock roadBlock) {
@@ -33,7 +35,8 @@ class RoadBlock {
       'type': roadBlock.type,
       'duration': roadBlock.duration,
       'marker': roadBlock.markerId,
-      'user': roadBlock.user
+      'user': roadBlock.user,
+      'images': roadBlock.images,
     };
   }
 
@@ -47,7 +50,8 @@ class RoadBlock {
       map['type'],
       map['duration'],
       map['marker'],
-      map['user']
+      map['user'],
+      map['images'] != null ? List<String>.from(map['images']) : null,
     );
   }
 }

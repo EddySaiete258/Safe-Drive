@@ -1,4 +1,8 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:safedrive/model/Road_block.dart';
 import 'package:safedrive/model/user.dart';
 
@@ -78,4 +82,28 @@ class FireStoreRepository {
       throw Exception(e);
     }
   }
+
+  Future<void> uploadUserImages(List<XFile> images, String roadBlockId) async {
+  List<String> downloadUrls = [];
+
+  for (var file in images) {
+    final fileName = DateTime.now().millisecondsSinceEpoch.toString();
+    final storageRef = FirebaseStorage.instance
+        .ref()
+        .child('road_block_uploads/$roadBlockId/$fileName.jpg');
+
+    final uploadTask = await storageRef.putFile(File(file.path));
+    final downloadUrl = await storageRef.getDownloadURL();
+    downloadUrls.add(downloadUrl);
+  }
+
+  final roadBlockDoc = _instance.collection(blockCollection).doc(roadBlockId);
+
+  await roadBlockDoc.set({
+    'uploadedImages': FieldValue.arrayUnion(downloadUrls),
+  }, SetOptions(merge: true));
+
+  print('✅ Uploaded ${downloadUrls.length} images and linked to user $roadBlockId');
+}
+
 }

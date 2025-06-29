@@ -346,6 +346,7 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
                                     context,
                                     roadBlock,
                                     userPhone!,
+                                    photos
                                   );
                                   setState(() {
                                     _temporaryMarker = null;

@@ -115,6 +115,19 @@ class AuthProviderLocal with ChangeNotifier {
   Future<void> login(String phoneNumber, BuildContext context) async {
     isLoading = true;
     notifyListeners();
+
+    bool userExist = await repository.userExist(phoneNumber);
+    if (!userExist) {
+      customSnackBar(
+        context,
+        "Nao existe conta associada a este numero",
+        isError: true,
+      );
+      isLoading = false;
+      notifyListeners();
+      return;
+    }
+
     await _auth.verifyPhoneNumber(
       phoneNumber: phoneNumber,
       timeout: const Duration(seconds: 60),
