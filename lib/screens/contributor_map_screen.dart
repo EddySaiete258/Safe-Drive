@@ -8,6 +8,7 @@ import 'package:safedrive/model/Road_block.dart';
 import 'package:safedrive/providers/auth_provider.dart';
 import 'package:safedrive/providers/road_block_provider.dart';
 import 'package:safedrive/utils/image_utils.dart';
+import 'package:safedrive/screens/navigation_map_screen.dart';
 import 'dart:async';
 
 import 'package:uuid/uuid.dart';
@@ -431,23 +432,53 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
               : SafeArea(
                 child: Consumer<RoadBlockProvider>(
                   builder: (context, provider, _) {
-                    return provider.isLoading ? Center(child: CircularProgressIndicator(),) : GoogleMap(
-                      initialCameraPosition: CameraPosition(
-                        target: _currentLatLng!,
-                        zoom: 16,
-                      ),
-                      onMapCreated: (controller) => _mapController = controller,
-                      myLocationEnabled: true,
-                      myLocationButtonEnabled: true,
-                      zoomControlsEnabled: false,
-                      trafficEnabled: true,
-                      onLongPress: _onMapLongPress,
-                      markers:
-                          provider.markers.isNotEmpty ? provider.markers : {},
-                    );
+                    return provider.isLoading
+                        ? Center(child: CircularProgressIndicator())
+                        : GoogleMap(
+                          initialCameraPosition: CameraPosition(
+                            target: _currentLatLng!,
+                            zoom: 16,
+                          ),
+                          onMapCreated:
+                              (controller) => _mapController = controller,
+                          myLocationEnabled: true,
+                          myLocationButtonEnabled: true,
+                          zoomControlsEnabled: false,
+                          trafficEnabled: true,
+                          onLongPress: _onMapLongPress,
+                          markers:
+                              provider.markers.isNotEmpty
+                                  ? provider.markers
+                                  : {},
+                        );
                   },
                 ),
               ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10),
+        child: ElevatedButton.icon(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Color(0xFF4CE5B1),
+            minimumSize: const Size(double.infinity, 50),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          icon: const Icon(Icons.navigation, color: Colors.white),
+          label: const Text(
+            "Ir para Navegação",
+            style: TextStyle(color: Colors.white),
+          ),
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const NavigationMapScreen(),
+              ),
+            );
+          },
+        ),
+      ),
+
       floatingActionButton: FloatingActionButton(
         backgroundColor:
             roadBlockProvider.selectedLatLng != null

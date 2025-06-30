@@ -5,6 +5,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
+import 'package:provider/provider.dart';
+import 'package:safedrive/providers/road_block_provider.dart';
 
 class NavigationMapScreen extends StatefulWidget {
   const NavigationMapScreen({super.key});
@@ -17,7 +19,6 @@ class _NavigationMapScreenState extends State<NavigationMapScreen> {
   GoogleMapController? _mapController;
   LatLng? _currentLatLng;
   LatLng? _destinationLatLng;
-  Set<Marker> _markers = {};
   Set<Polyline> _polylines = {};
   late StreamSubscription<Position> _positionSubscription;
 
@@ -25,12 +26,19 @@ class _NavigationMapScreenState extends State<NavigationMapScreen> {
   void initState() {
     super.initState();
     _startLocationUpdates();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<RoadBlockProvider>(
+        context,
+        listen: false,
+      ).fetchRoadBlocks(context);
+    });
   }
 
   void _startLocationUpdates() async {
     LocationPermission permission = await Geolocator.requestPermission();
     if (permission == LocationPermission.denied ||
-        permission == LocationPermission.deniedForever) return;
+        permission == LocationPermission.deniedForever)
+      return;
 
     final settings = LocationSettings(
       accuracy: LocationAccuracy.high,
@@ -41,9 +49,7 @@ class _NavigationMapScreenState extends State<NavigationMapScreen> {
       locationSettings: settings,
     ).listen((position) {
       final newLatLng = LatLng(position.latitude, position.longitude);
-      setState(() {
-        _currentLatLng = newLatLng;
-      });
+      setState(() => _currentLatLng = newLatLng);
       _mapController?.animateCamera(CameraUpdate.newLatLng(newLatLng));
     });
   }
@@ -53,13 +59,6 @@ class _NavigationMapScreenState extends State<NavigationMapScreen> {
 
     setState(() {
       _destinationLatLng = latLng;
-      _markers = {
-        Marker(
-          markerId: const MarkerId('destino'),
-          position: latLng,
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-        ),
-      };
     });
 
     await _fetchRoute();
@@ -72,9 +71,10 @@ class _NavigationMapScreenState extends State<NavigationMapScreen> {
     final destination =
         '${_destinationLatLng!.latitude},${_destinationLatLng!.longitude}';
 
-    const apiKey = 'AIzaSyCSAsD5WrWQw7cwVbARdBwOG6N5o43txSU';
+    const apiKey = 'AIzaSyCSAsD5WrWQw7cwVbARdBwOG6N5o43txSU'; // CHAVE CORRETA
     final url = Uri.parse(
-        'https://maps.googleapis.com/maps/api/directions/json?origin=$origin&destination=$destination&key=$apiKey');
+      'https://maps.googleapis.com/maps/api/directions/json?origin=$origin&destination=$destination&key=$apiKey',
+    );
 
     final response = await http.get(url);
     if (response.statusCode == 200) {
@@ -85,9 +85,8 @@ class _NavigationMapScreenState extends State<NavigationMapScreen> {
         final points = route['overview_polyline']['points'];
 
         final polylinePoints = PolylinePoints().decodePolyline(points);
-        final polylineCoordinates = polylinePoints
-            .map((e) => LatLng(e.latitude, e.longitude))
-            .toList();
+        final polylineCoordinates =
+            polylinePoints.map((e) => LatLng(e.latitude, e.longitude)).toList();
 
         setState(() {
           _polylines = {
@@ -99,7 +98,11 @@ class _NavigationMapScreenState extends State<NavigationMapScreen> {
             ),
           };
         });
+      } else {
+        print('Nenhuma rota encontrada na resposta da API.');
       }
+    } else {
+      print('Erro ao buscar rota: ${response.statusCode}');
     }
   }
 
@@ -112,23 +115,42 @@ class _NavigationMapScreenState extends State<NavigationMapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final roadBlockProvider = Provider.of<RoadBlockProvider>(context);
+    final allMarkers = {
+      ...roadBlockProvider.markers,
+      if (_destinationLatLng != null)
+        Marker(
+          markerId: const MarkerId('destino'),
+          position: _destinationLatLng!,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        ),
+    };
+
     return Scaffold(
-      body: _currentLatLng == null
-          ? const Center(child: CircularProgressIndicator())
-          : SafeArea(
-              child: GoogleMap(
-                initialCameraPosition: CameraPosition(
-                  target: _currentLatLng!,
-                  zoom: 16,
+      body:
+          _currentLatLng == null
+              ? const Center(child: CircularProgressIndicator())
+              : SafeArea(
+                child: GoogleMap(
+                  initialCameraPosition: CameraPosition(
+                    target: _currentLatLng!,
+                    zoom: 16,
+                  ),
+                  onMapCreated: (controller) => _mapController = controller,
+                  myLocationEnabled: true,
+                  myLocationButtonEnabled: true,
+                  onTap: _onMapTap,
+                  markers: allMarkers,
+                  polylines: _polylines,
                 ),
-                onMapCreated: (controller) => _mapController = controller,
-                myLocationEnabled: true,
-                myLocationButtonEnabled: true,
-                onTap: _onMapTap,
-                markers: _markers,
-                polylines: _polylines,
               ),
-            ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color(0xFF4CE5B1),
+        onPressed: () {
+          Navigator.of(context).pushReplacementNamed('/contributor');
+        },
+        child: const Icon(Icons.map_outlined, color: Colors.white),
+      ),
     );
   }
 }
