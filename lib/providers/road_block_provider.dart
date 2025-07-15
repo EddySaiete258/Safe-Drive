@@ -12,6 +12,7 @@ import 'package:safedrive/providers/auth_provider.dart';
 import 'package:safedrive/services/firestore_service.dart';
 import 'package:safedrive/services/preferences.dart';
 import 'package:safedrive/utils/custom_snackbar.dart';
+import 'package:safedrive/widgets/bloqueio_detalhe_card.dart';
 import 'package:http/http.dart' as http;
 
 class RoadBlockProvider extends ChangeNotifier {
@@ -53,16 +54,21 @@ class RoadBlockProvider extends ChangeNotifier {
   }
 
   Future fetchRoadBlocks(context) async {
-    markers.clear(); // Limpa os anteriores
-    roadBlocks.clear(); // Se estiver armazenando os roadblocks também
+    markers.clear();
+    roadBlocks.clear();
     isLoading = true;
     notifyListeners();
+
     try {
+      final isNavigation =
+          ModalRoute.of(context)?.settings.name == '/navigation';
+
       QuerySnapshot data = await repository.roadBlocks();
       for (DocumentSnapshot doc in data.docs) {
         var block = doc.data() as Map<String, dynamic>;
         RoadBlock newRoadblock = RoadBlock.fromMap(block);
         roadBlocks.add(newRoadblock);
+
         AuthProviderLocal authProvider = Provider.of<AuthProviderLocal>(
           context,
           listen: false,
@@ -71,10 +77,9 @@ class RoadBlockProvider extends ChangeNotifier {
         userId ??= await repository.getUserID(authProvider.userID());
         DocumentReference<Map<String, dynamic>>? userRef = await repository
             .userReference(userId);
-        bool canEdit = newRoadblock.user == userRef ? true : false;
+        bool canEdit = newRoadblock.user == userRef;
 
         String blocImage = 'assets/images/roadblock.png';
-
         if (newRoadblock.type == 'Acidente') {
           blocImage = 'assets/images/blocks/acidente.png';
         } else if (newRoadblock.type == 'Obra') {
@@ -86,8 +91,9 @@ class RoadBlockProvider extends ChangeNotifier {
         } else if (newRoadblock.type == 'Outro') {
           blocImage = 'assets/images/blocks/outros.png';
         }
+
         BitmapDescriptor roadblockIcon = await BitmapDescriptor.asset(
-          ImageConfiguration(size: Size(48, 48)), // Adjust size as needed
+          ImageConfiguration(size: Size(48, 48)),
           blocImage,
         );
 
@@ -108,192 +114,190 @@ class RoadBlockProvider extends ChangeNotifier {
                     padding: EdgeInsets.only(
                       bottom: MediaQuery.of(context).viewInsets.bottom,
                     ),
-                    child: StatefulBuilder(
-                      builder:
-                          (context, setModalState) => Container(
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(30),
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black26,
-                                  blurRadius: 15,
-                                  spreadRadius: 5,
-                                  offset: const Offset(0, -3),
-                                ),
-                              ],
+                    child:
+                        isNavigation
+                            ? BloqueioDetalheCard(roadBlock: newRoadblock)
+                            : _buildOldContributorModal(
+                              context,
+                              newRoadblock,
+                              canEdit,
+                              doc,
                             ),
-                            child: SingleChildScrollView(
-                              child: Column(
-                                children: [
-                                  Container(
-                                    width: 50,
-                                    height: 5,
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey[300],
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 20),
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      const Text(
-                                        'Bloqueio',
-                                        style: TextStyle(
-                                          fontSize: 22,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.black87,
-                                        ),
-                                      ),
-
-                                      IconButton(
-                                        onPressed: () {
-                                          Navigator.of(context).pop();
-                                        },
-                                        icon: Icon(Icons.close),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 20),
-                                  TextFormField(
-                                    initialValue: newRoadblock.location,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Localização',
-                                      border: OutlineInputBorder(),
-                                      prefixIcon: Icon(Icons.location_on),
-                                    ),
-                                    enabled: false,
-                                  ),
-                                  const SizedBox(height: 10),
-                                  TextFormField(
-                                    decoration: const InputDecoration(
-                                      labelText: 'Tipo de Bloqueio',
-                                      border: OutlineInputBorder(),
-                                    ),
-                                    maxLines: 3,
-                                    enabled: false,
-                                    initialValue: newRoadblock.type,
-                                  ),
-                                  const SizedBox(height: 10),
-                                  TextFormField(
-                                    decoration: const InputDecoration(
-                                      labelText: 'Descrição',
-                                      border: OutlineInputBorder(),
-                                    ),
-                                    maxLines: 3,
-                                    enabled: false,
-                                    initialValue: newRoadblock.description,
-                                  ),
-                                  const SizedBox(height: 10),
-                                  TextFormField(
-                                    decoration: const InputDecoration(
-                                      labelText: 'Duração Estimada',
-                                      border: OutlineInputBorder(),
-                                    ),
-                                    maxLines: 3,
-                                    enabled: false,
-                                    initialValue: newRoadblock.duration,
-                                  ),
-
-                                  if (newRoadblock.images != null &&
-                                      newRoadblock.images!.isNotEmpty) ...{
-                                    const SizedBox(height: 10),
-                                    Wrap(
-                                      spacing: 10,
-                                      children:
-                                          newRoadblock.images!.map((file) {
-                                            return GestureDetector(
-                                              onTap: () {
-                                                showDialog(
-                                                  context: context,
-                                                  builder:
-                                                      (_) => Dialog(
-                                                        backgroundColor:
-                                                            Colors.transparent,
-                                                        insetPadding:
-                                                            EdgeInsets.all(10),
-                                                        child: GestureDetector(
-                                                          onTap:
-                                                              () => Navigator.pop(
-                                                                context,
-                                                              ), // toca para fechar
-                                                          child: InteractiveViewer(
-                                                            child: CachedNetworkImage(
-                                                              imageUrl: file,
-                                                              fit:
-                                                                  BoxFit
-                                                                      .contain,
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                );
-                                              },
-                                              child: SizedBox(
-                                                height: 80,
-                                                width: 80,
-                                                child: CachedNetworkImage(
-                                                  imageUrl: file,
-                                                ),
-                                              ),
-                                            );
-                                          }).toList(),
-                                    ),
-                                  },
-                                  const SizedBox(height: 20),
-                                  if (canEdit) ...{
-                                    ElevatedButton.icon(
-                                      style: ElevatedButton.styleFrom(
-                                        foregroundColor: Colors.white,
-                                        backgroundColor: Colors.red,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 14,
-                                          horizontal: 24,
-                                        ),
-                                        minimumSize: const Size(
-                                          double.infinity,
-                                          50,
-                                        ),
-                                      ),
-                                      icon: const Icon(Icons.close),
-                                      label: const Text("Apagar"),
-                                      onPressed: () async {
-                                        await Provider.of<RoadBlockProvider>(
-                                          context,
-                                          listen: false,
-                                        ).deleteRoadBlock(context, doc);
-                                        // ignore: use_build_context_synchronously
-                                        Navigator.of(context).pop();
-                                      },
-                                    ),
-                                  },
-                                ],
-                              ),
-                            ),
-                          ),
-                    ),
                   ),
             );
           },
         );
+
         markers.add(newMarker);
       }
+
       isLoading = false;
       notifyListeners();
     } catch (e) {
       isLoading = false;
       notifyListeners();
     }
+  }
+
+  Widget _buildOldContributorModal(
+    BuildContext context,
+    RoadBlock newRoadblock,
+    bool canEdit,
+    DocumentSnapshot doc,
+  ) {
+    return StatefulBuilder(
+      builder:
+          (context, setModalState) => Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(30),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 15,
+                  spreadRadius: 5,
+                  offset: const Offset(0, -3),
+                ),
+              ],
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  Container(
+                    width: 50,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Bloqueio',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: Icon(Icons.close),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  TextFormField(
+                    initialValue: newRoadblock.location,
+                    decoration: const InputDecoration(
+                      labelText: 'Localização',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.location_on),
+                    ),
+                    enabled: false,
+                  ),
+                  const SizedBox(height: 10),
+                  TextFormField(
+                    initialValue: newRoadblock.type,
+                    decoration: const InputDecoration(
+                      labelText: 'Tipo de Bloqueio',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 3,
+                    enabled: false,
+                  ),
+                  const SizedBox(height: 10),
+                  TextFormField(
+                    initialValue: newRoadblock.description,
+                    decoration: const InputDecoration(
+                      labelText: 'Descrição',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 3,
+                    enabled: false,
+                  ),
+                  const SizedBox(height: 10),
+                  TextFormField(
+                    initialValue: newRoadblock.duration,
+                    decoration: const InputDecoration(
+                      labelText: 'Duração Estimada',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 3,
+                    enabled: false,
+                  ),
+                  if (newRoadblock.images != null &&
+                      newRoadblock.images!.isNotEmpty) ...{
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 10,
+                      children:
+                          newRoadblock.images!.map((file) {
+                            return GestureDetector(
+                              onTap: () {
+                                showDialog(
+                                  context: context,
+                                  builder:
+                                      (_) => Dialog(
+                                        backgroundColor: Colors.transparent,
+                                        insetPadding: EdgeInsets.all(10),
+                                        child: GestureDetector(
+                                          onTap: () => Navigator.pop(context),
+                                          child: InteractiveViewer(
+                                            child: CachedNetworkImage(
+                                              imageUrl: file,
+                                              fit: BoxFit.contain,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                );
+                              },
+                              child: SizedBox(
+                                height: 80,
+                                width: 80,
+                                child: CachedNetworkImage(imageUrl: file),
+                              ),
+                            );
+                          }).toList(),
+                    ),
+                  },
+                  const SizedBox(height: 20),
+                  if (canEdit)
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: Colors.red,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 14,
+                          horizontal: 24,
+                        ),
+                        minimumSize: const Size(double.infinity, 50),
+                      ),
+                      icon: const Icon(Icons.close),
+                      label: const Text("Apagar"),
+                      onPressed: () async {
+                        await Provider.of<RoadBlockProvider>(
+                          context,
+                          listen: false,
+                        ).deleteRoadBlock(context, doc);
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                ],
+              ),
+            ),
+          ),
+    );
   }
 
   Future<RoadBlock?> findRoadBlock(LatLng postion) async {

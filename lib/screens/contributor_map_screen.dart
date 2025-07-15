@@ -473,6 +473,7 @@ class _ContributorMapScreenState extends State<ContributorMapScreen> {
             Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (context) => const NavigationMapScreen(),
+                settings: const RouteSettings(name: '/navigation'),
               ),
             );
           },
